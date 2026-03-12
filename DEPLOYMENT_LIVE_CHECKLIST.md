@@ -19,7 +19,6 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 # Cashfree (leave empty until approval)
 CASHFREE_APP_ID=
 CASHFREE_SECRET_KEY=
-CASHFREE_ENV=production
 CASHFREE_API_VERSION=2025-01-01
 NEXT_PUBLIC_CASHFREE_MODE=production
 ```
@@ -50,7 +49,7 @@ Post-deploy checks:
 
 When Cashfree production account is approved:
 1. Add `CASHFREE_APP_ID` and `CASHFREE_SECRET_KEY` in production env.
-2. Keep `CASHFREE_ENV=production` and `NEXT_PUBLIC_CASHFREE_MODE=production`.
+2. Keep `NEXT_PUBLIC_CASHFREE_MODE=production`.
 3. Set webhook URL in Cashfree dashboard:
    - `https://your-domain.com/api/cashfree/webhook`
 4. Ensure return URL domain is allowed by Cashfree:
