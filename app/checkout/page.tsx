@@ -26,7 +26,14 @@ type CheckoutForm = {
   fullName: string;
   email: string;
   phone: string;
-  shippingAddress: string;
+  addressLine1: string;
+  addressLine2: string;
+  houseNo: string;
+  area: string;
+  city: string;
+  state: string;
+  pincode: string;
+  country: string;
   acceptedTerms: boolean;
   acceptedPrivacy: boolean;
 };
@@ -35,10 +42,31 @@ const initialForm: CheckoutForm = {
   fullName: "",
   email: "",
   phone: "",
-  shippingAddress: "",
+  addressLine1: "",
+  addressLine2: "",
+  houseNo: "",
+  area: "",
+  city: "",
+  state: "",
+  pincode: "",
+  country: "India",
   acceptedTerms: false,
   acceptedPrivacy: false,
 };
+
+function composeShippingAddress(form: CheckoutForm) {
+  const lines = [
+    `Address Line 1: ${form.addressLine1.trim()}`,
+    form.addressLine2.trim() ? `Address Line 2: ${form.addressLine2.trim()}` : "",
+    `House No: ${form.houseNo.trim()}`,
+    `Area: ${form.area.trim()}`,
+    `City: ${form.city.trim()}`,
+    `State: ${form.state.trim()}`,
+    `Pincode: ${form.pincode.trim()}`,
+    `Country: ${form.country.trim()}`,
+  ].filter(Boolean);
+  return lines.join(", ");
+}
 
 const cashfreeMode = process.env.NEXT_PUBLIC_CASHFREE_MODE === "production" ? "production" : "sandbox";
 
@@ -96,7 +124,13 @@ export default function CheckoutPage() {
     form.fullName.trim().length > 1 &&
     form.email.trim().length > 4 &&
     form.phone.trim().length > 6 &&
-    form.shippingAddress.trim().length > 8 &&
+    form.addressLine1.trim().length > 3 &&
+    form.houseNo.trim().length > 0 &&
+    form.area.trim().length > 1 &&
+    form.city.trim().length > 1 &&
+    form.state.trim().length > 1 &&
+    /^[1-9][0-9]{5}$/.test(form.pincode.trim()) &&
+    form.country === "India" &&
     form.acceptedTerms &&
     form.acceptedPrivacy;
 
@@ -110,7 +144,7 @@ export default function CheckoutPage() {
         customerName: form.fullName.trim(),
         customerEmail: form.email.trim(),
         customerPhone: form.phone.trim(),
-        shippingAddress: form.shippingAddress.trim(),
+        shippingAddress: composeShippingAddress(form),
         acceptedTerms: form.acceptedTerms,
         acceptedPrivacy: form.acceptedPrivacy,
         paymentMethod,
@@ -195,12 +229,60 @@ export default function CheckoutPage() {
             value={form.phone}
             onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
           />
-          <textarea
-            className="min-h-[120px] w-full rounded-md border border-border bg-background px-3 py-2 text-sm outline-none ring-ring focus:ring-2"
-            placeholder="Shipping address"
-            value={form.shippingAddress}
-            onChange={(e) => setForm((prev) => ({ ...prev, shippingAddress: e.target.value }))}
-          />
+          <div className="space-y-3 rounded-xl border border-border/80 p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Shipping Address</p>
+            <Input
+              placeholder="Address line 1"
+              value={form.addressLine1}
+              onChange={(e) => setForm((prev) => ({ ...prev, addressLine1: e.target.value }))}
+            />
+            <Input
+              placeholder="Address line 2 (optional)"
+              value={form.addressLine2}
+              onChange={(e) => setForm((prev) => ({ ...prev, addressLine2: e.target.value }))}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                placeholder="House no."
+                value={form.houseNo}
+                onChange={(e) => setForm((prev) => ({ ...prev, houseNo: e.target.value }))}
+              />
+              <Input
+                placeholder="Area / Locality"
+                value={form.area}
+                onChange={(e) => setForm((prev) => ({ ...prev, area: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                placeholder="City"
+                value={form.city}
+                onChange={(e) => setForm((prev) => ({ ...prev, city: e.target.value }))}
+              />
+              <Input
+                placeholder="State"
+                value={form.state}
+                onChange={(e) => setForm((prev) => ({ ...prev, state: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Input
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="Pincode"
+                value={form.pincode}
+                onChange={(e) => setForm((prev) => ({ ...prev, pincode: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+              />
+              <select
+                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm outline-none ring-ring focus:ring-2"
+                value={form.country}
+                onChange={(e) => setForm((prev) => ({ ...prev, country: e.target.value }))}
+              >
+                <option value="India">India</option>
+              </select>
+            </div>
+          </div>
 
           <div className="space-y-2 rounded-xl border border-border/80 p-3">
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Payment Method</p>
@@ -238,7 +320,12 @@ export default function CheckoutPage() {
               checked={form.acceptedTerms}
               onChange={(e) => setForm((prev) => ({ ...prev, acceptedTerms: e.target.checked }))}
             />
-            I accept the Terms and Conditions
+            <span>
+              I accept the{" "}
+              <Link className="underline decoration-border underline-offset-4 hover:text-foreground" href="/terms-and-conditions">
+                Terms and Conditions
+              </Link>
+            </span>
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -246,7 +333,12 @@ export default function CheckoutPage() {
               checked={form.acceptedPrivacy}
               onChange={(e) => setForm((prev) => ({ ...prev, acceptedPrivacy: e.target.checked }))}
             />
-            I accept the Privacy Policy
+            <span>
+              I accept the{" "}
+              <Link className="underline decoration-border underline-offset-4 hover:text-foreground" href="/privacy-policy">
+                Privacy Policy
+              </Link>
+            </span>
           </label>
 
           {errorMessage ? <p className="text-sm text-red-500">{errorMessage}</p> : null}
