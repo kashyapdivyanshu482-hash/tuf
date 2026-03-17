@@ -16,22 +16,13 @@ Next.js + Tailwind + Supabase e-commerce storefront for TUF Clothing, with direc
    ```bash
    npm install
    ```
-2. Copy env template and set values:
-   ```bash
-   # macOS/Linux
-   cp .env.example .env.local
-
-   # Windows PowerShell
-   Copy-Item .env.example .env.local
-   ```
+2. Set values in `.env.local`.
 3. Run the app:
    ```bash
    npm run dev
    ```
 
 ## Required Environment Variables
-
-See `.env.example`.
 
 Minimum for storefront + admin:
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -62,4 +53,5 @@ Detailed launch steps: `DEPLOYMENT_LIVE_CHECKLIST.md`
 ## Security
 
 - Never commit `.env.local` or real secrets.
+- For Vercel, copy the same keys from `.env.local` into Project Settings -> Environment Variables.
 - If secrets are exposed, rotate them immediately in Supabase/Cashfree.
