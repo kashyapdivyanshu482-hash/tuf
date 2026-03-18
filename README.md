@@ -34,6 +34,7 @@ Minimum for storefront + admin:
 For payments:
 - `CASHFREE_APP_ID`
 - `CASHFREE_SECRET_KEY`
+- `CASHFREE_WEBHOOK_SECRET`
 - `CASHFREE_API_VERSION`
 - `NEXT_PUBLIC_CASHFREE_MODE`
 

@@ -28,6 +28,7 @@ export const adminPanelSecret = readEnv("ADMIN_PANEL_SECRET", "ADMIN_SECRET");
 
 export const cashfreeAppId = readEnv("CASHFREE_APP_ID");
 export const cashfreeSecretKey = readEnv("CASHFREE_SECRET_KEY");
+export const cashfreeWebhookSecret = readEnv("CASHFREE_WEBHOOK_SECRET", "CASHFREE_SECRET_KEY");
 export const cashfreeEnvironment = readEnv("NEXT_PUBLIC_CASHFREE_MODE");
 export const cashfreeApiVersion = readEnv("CASHFREE_API_VERSION") || "2025-01-01";
 export const siteUrl = readEnv("NEXT_PUBLIC_SITE_URL", "SITE_URL");

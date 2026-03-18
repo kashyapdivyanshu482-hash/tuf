@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { cashfreeWebhookSecret } from "@/lib/env";
+import { verifyCashfreeWebhookSignature } from "@/lib/cashfree";
 import type { CheckoutPaymentMethod } from "@/lib/pricing";
 import { getOrderPaymentUpdate } from "@/lib/order-payment";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -49,7 +51,19 @@ function extractPaymentStatus(payload: Record<string, unknown>) {
 
 export async function POST(request: Request) {
   try {
-    const body = (await request.json()) as Record<string, unknown>;
+    if (!cashfreeWebhookSecret) {
+      return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 503 });
+    }
+
+    const rawBody = await request.text();
+    const signature = request.headers.get("x-webhook-signature")?.trim() || "";
+    const timestamp = request.headers.get("x-webhook-timestamp")?.trim() || "";
+
+    if (!verifyCashfreeWebhookSignature({ timestamp, rawBody, signature })) {
+      return NextResponse.json({ ok: false, error: "Invalid webhook signature." }, { status: 401 });
+    }
+
+    const body = JSON.parse(rawBody || "{}") as Record<string, unknown>;
     const orderId = extractOrderId(body);
     const rawPaymentStatus = extractPaymentStatus(body);
 
@@ -80,6 +94,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ ok: true });
+    return NextResponse.json({ ok: false }, { status: 400 });
   }
 }

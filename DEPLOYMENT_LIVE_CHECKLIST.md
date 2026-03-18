@@ -19,12 +19,14 @@ NEXT_PUBLIC_SITE_URL=https://your-domain.com
 # Cashfree (leave empty until approval)
 CASHFREE_APP_ID=
 CASHFREE_SECRET_KEY=
+CASHFREE_WEBHOOK_SECRET=
 CASHFREE_API_VERSION=2025-01-01
 NEXT_PUBLIC_CASHFREE_MODE=production
 ```
 
 Notes:
 - `CASHFREE_SECRET_KEY` must stay server-only.
+- `CASHFREE_WEBHOOK_SECRET` must stay server-only.
 - If `CASHFREE_APP_ID` / `CASHFREE_SECRET_KEY` are empty, checkout is intentionally blocked with a clear message.
 
 ## 2) Supabase Setup
@@ -49,10 +51,11 @@ Post-deploy checks:
 
 When Cashfree production account is approved:
 1. Add `CASHFREE_APP_ID` and `CASHFREE_SECRET_KEY` in production env.
-2. Keep `NEXT_PUBLIC_CASHFREE_MODE=production`.
-3. Set webhook URL in Cashfree dashboard:
+2. Add `CASHFREE_WEBHOOK_SECRET` in production env if Cashfree gave you a dedicated webhook secret. If not, the code falls back to `CASHFREE_SECRET_KEY`.
+3. Keep `NEXT_PUBLIC_CASHFREE_MODE=production`.
+4. Set webhook URL in Cashfree dashboard:
    - `https://your-domain.com/api/cashfree/webhook`
-4. Ensure return URL domain is allowed by Cashfree:
+5. Ensure return URL domain is allowed by Cashfree:
    - `https://your-domain.com/checkout/return`
 
 ## 5) Current Behavior Without Cashfree Keys

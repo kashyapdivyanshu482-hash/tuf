@@ -1,8 +1,10 @@
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   cashfreeApiVersion,
   cashfreeAppId,
   cashfreeEnvironment,
   cashfreeSecretKey,
+  cashfreeWebhookSecret,
 } from "@/lib/env";
 
 type CreateCashfreeOrderInput = {
@@ -31,6 +33,24 @@ type FetchCashfreeOrderResult = {
 
 export function isCashfreeConfigured() {
   return Boolean(cashfreeAppId && cashfreeSecretKey);
+}
+
+export function verifyCashfreeWebhookSignature(input: {
+  timestamp: string;
+  rawBody: string;
+  signature: string;
+}) {
+  const secret = cashfreeWebhookSecret || cashfreeSecretKey;
+  if (!secret || !input.timestamp || !input.signature) return false;
+
+  const expectedSignature = createHmac("sha256", secret)
+    .update(`${input.timestamp}${input.rawBody}`)
+    .digest("base64");
+
+  const expectedBuffer = Buffer.from(expectedSignature);
+  const receivedBuffer = Buffer.from(input.signature);
+
+  return expectedBuffer.length === receivedBuffer.length && timingSafeEqual(expectedBuffer, receivedBuffer);
 }
 
 function getCashfreeBaseUrl() {
