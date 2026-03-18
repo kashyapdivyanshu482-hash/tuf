@@ -33,6 +33,15 @@ function badRequest(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
 
+function failCheckout(message: string, status = 400, context?: Record<string, unknown>) {
+  console.error("Checkout create-order failed", {
+    status,
+    message,
+    ...(context || {}),
+  });
+  return badRequest(message, status);
+}
+
 function cleanString(value: unknown) {
   return typeof value === "string" ? value.trim() : "";
 }
@@ -71,15 +80,15 @@ export async function POST(request: Request) {
     const paymentMethodRaw = cleanString(body.paymentMethod);
     const items = Array.isArray(body.items) ? body.items : [];
 
-    if (!customerName || customerName.length < 2) return badRequest("Full name is required.");
-    if (!isValidEmail(customerEmail)) return badRequest("Valid email is required.");
-    if (!customerPhone || customerPhone.length < 7) return badRequest("Valid phone is required.");
-    if (!shippingAddress || shippingAddress.length < 8) return badRequest("Shipping address is required.");
-    if (!acceptedTerms || !acceptedPrivacy) return badRequest("Accept terms and privacy to continue.");
-    if (!isValidPaymentMethod(paymentMethodRaw)) return badRequest("Invalid payment method.");
-    if (items.length === 0) return badRequest("Cart is empty.");
+    if (!customerName || customerName.length < 2) return failCheckout("Full name is required.");
+    if (!isValidEmail(customerEmail)) return failCheckout("Valid email is required.");
+    if (!customerPhone || customerPhone.length < 7) return failCheckout("Valid phone is required.");
+    if (!shippingAddress || shippingAddress.length < 8) return failCheckout("Shipping address is required.");
+    if (!acceptedTerms || !acceptedPrivacy) return failCheckout("Accept terms and privacy to continue.");
+    if (!isValidPaymentMethod(paymentMethodRaw)) return failCheckout("Invalid payment method.");
+    if (items.length === 0) return failCheckout("Cart is empty.");
     if (!isCashfreeConfigured()) {
-      return badRequest("Payments are temporarily unavailable. Cashfree keys are not configured yet.", 503);
+      return failCheckout("Payments are temporarily unavailable. Cashfree keys are not configured yet.", 503);
     }
 
     const normalizedItems = items
@@ -92,7 +101,7 @@ export async function POST(request: Request) {
       }))
       .filter((item) => item.productId && item.productName);
 
-    if (normalizedItems.length === 0) return badRequest("No valid cart items.");
+    if (normalizedItems.length === 0) return failCheckout("No valid cart items.");
 
     const totals = getCheckoutTotalsFromItems(
       normalizedItems.map((item) => ({
@@ -104,7 +113,7 @@ export async function POST(request: Request) {
 
     const supabase = await createClient();
     if (!supabase) {
-      return badRequest("Supabase is not configured.", 500);
+      return failCheckout("Supabase is not configured.", 500);
     }
 
     const orderInsertPayload = {
@@ -131,7 +140,9 @@ export async function POST(request: Request) {
 
     const { data: order, error: orderInsertError } = await supabase.from("orders").insert(orderInsertPayload).select("*").single();
     if (orderInsertError || !order) {
-      return badRequest(orderInsertError?.message || "Failed to create order.", 500);
+      return failCheckout(orderInsertError?.message || "Failed to create order.", 500, {
+        stage: "order_insert",
+      });
     }
 
     const orderItemsPayload = normalizedItems.map((item) => {
@@ -160,7 +171,10 @@ export async function POST(request: Request) {
     const { error: itemInsertError } = await supabase.from("order_items").insert(orderItemsPayload);
     if (itemInsertError) {
       await supabase.from("orders").delete().eq("id", order.id);
-      return badRequest(itemInsertError.message, 500);
+      return failCheckout(itemInsertError.message, 500, {
+        stage: "order_items_insert",
+        orderId: order.id,
+      });
     }
 
     const baseUrl = await getServerBaseUrl();
@@ -190,12 +204,18 @@ export async function POST(request: Request) {
       });
     } catch (error) {
       await supabase.from("orders").delete().eq("id", order.id);
-      return badRequest(error instanceof Error ? error.message : "Cashfree order creation failed.", 500);
+      return failCheckout(error instanceof Error ? error.message : "Cashfree order creation failed.", 500, {
+        stage: "cashfree_create_order",
+        orderId: order.id,
+      });
     }
 
     if (!cashfree.paymentSessionId) {
       await supabase.from("orders").delete().eq("id", order.id);
-      return badRequest("Cashfree payment session could not be created.", 500);
+      return failCheckout("Cashfree payment session could not be created.", 500, {
+        stage: "cashfree_session",
+        orderId: order.id,
+      });
     }
 
     await supabase
