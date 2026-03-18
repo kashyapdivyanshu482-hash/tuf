@@ -54,7 +54,7 @@ export default function PrivacyPolicyPage() {
           You may request correction or deletion of your personal data, subject to legal and operational requirements. For such
           requests, contact{" "}
           <a className="underline decoration-border underline-offset-4 hover:text-foreground" href="mailto:support@tufclothing.com">
-            support@tufclothing.com
+            tufclothing@proton.me
           </a>
           .
         </p>
@@ -64,7 +64,7 @@ export default function PrivacyPolicyPage() {
           We use reasonable technical and operational safeguards to protect your information, but no digital system can guarantee
           absolute security.
         </p>
-        <h3>Feel Free to Contact us on ou official email address: tufclothing@proton.me</h3>
+        <h3>Feel Free to Contact us on our official email address: tufclothing@proton.me</h3>
       </div>
 
       <p className="text-xs text-muted-foreground">
