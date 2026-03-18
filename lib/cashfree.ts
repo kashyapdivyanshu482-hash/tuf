@@ -72,14 +72,24 @@ function getCashfreeHeaders() {
 }
 
 async function cashfreeFetch(path: string, init?: RequestInit) {
-  const response = await fetch(`${getCashfreeBaseUrl()}${path}`, {
-    ...init,
-    headers: {
-      ...getCashfreeHeaders(),
-      ...(init?.headers || {}),
-    },
-    cache: "no-store",
-  });
+  const url = `${getCashfreeBaseUrl()}${path}`;
+  let response: Response;
+
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        ...getCashfreeHeaders(),
+        ...(init?.headers || {}),
+      },
+      cache: "no-store",
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown network error";
+    throw new Error(
+      `Unable to reach Cashfree API at ${url}. Check Vercel env vars, key validity, and Cashfree live account activation. Original error: ${message}`,
+    );
+  }
 
   const rawText = await response.text();
   let parsed: unknown = null;

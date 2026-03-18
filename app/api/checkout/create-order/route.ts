@@ -216,6 +216,7 @@ export async function POST(request: Request) {
       codHandlingFee: paymentBreakdown.codHandlingFee,
     });
   } catch (error) {
+    console.error("Checkout create-order failed:", error);
     return badRequest(error instanceof Error ? error.message : "Checkout failed.", 500);
   }
 }
