@@ -49,17 +49,27 @@ function extractPaymentStatus(payload: Record<string, unknown>) {
   return "";
 }
 
+function getWebhookHeader(request: Request, primary: string, legacy: string) {
+  return request.headers.get(primary)?.trim() || request.headers.get(legacy)?.trim() || "";
+}
+
 export async function POST(request: Request) {
   try {
     if (!cashfreeWebhookSecret) {
+      console.error("Cashfree webhook rejected: missing webhook secret env");
       return NextResponse.json({ ok: false, error: "Webhook secret is not configured." }, { status: 503 });
     }
 
     const rawBody = await request.text();
-    const signature = request.headers.get("x-webhook-signature")?.trim() || "";
-    const timestamp = request.headers.get("x-webhook-timestamp")?.trim() || "";
+    const signature = getWebhookHeader(request, "x-webhook-signature", "x-cashfree-signature");
+    const timestamp = getWebhookHeader(request, "x-webhook-timestamp", "x-cashfree-timestamp");
 
     if (!verifyCashfreeWebhookSignature({ timestamp, rawBody, signature })) {
+      console.error("Cashfree webhook rejected: invalid signature", {
+        hasTimestamp: Boolean(timestamp),
+        hasSignature: Boolean(signature),
+        contentType: request.headers.get("content-type") || "",
+      });
       return NextResponse.json({ ok: false, error: "Invalid webhook signature." }, { status: 401 });
     }
 
@@ -67,10 +77,18 @@ export async function POST(request: Request) {
     const orderId = extractOrderId(body);
     const rawPaymentStatus = extractPaymentStatus(body);
 
-    if (!orderId) return NextResponse.json({ ok: true, skipped: true });
+    if (!orderId) {
+      console.log("Cashfree webhook accepted without order_id", {
+        event: cleanString(body.type) || cleanString(body.event) || "unknown",
+      });
+      return NextResponse.json({ ok: true, skipped: true });
+    }
 
     const admin = createAdminClient();
-    if (!admin) return NextResponse.json({ ok: true, skipped: true });
+    if (!admin) {
+      console.error("Cashfree webhook skipped: missing admin client");
+      return NextResponse.json({ ok: true, skipped: true });
+    }
 
     const { data: order } = await admin
       .from("orders")
@@ -78,7 +96,10 @@ export async function POST(request: Request) {
       .eq("id", orderId)
       .single();
 
-    if (!order) return NextResponse.json({ ok: true, skipped: true });
+    if (!order) {
+      console.log("Cashfree webhook skipped: order not found", { orderId });
+      return NextResponse.json({ ok: true, skipped: true });
+    }
 
     const paymentMethod = (order.payment_method as CheckoutPaymentMethod) || "PREPAID";
     const update = getOrderPaymentUpdate(paymentMethod, Number(order.pay_now_amount || 0), rawPaymentStatus);
@@ -92,8 +113,16 @@ export async function POST(request: Request) {
       })
       .eq("id", orderId);
 
+    console.log("Cashfree webhook processed", {
+      orderId,
+      paymentMethod,
+      rawPaymentStatus,
+      nextPaymentStatus: update.paymentStatus,
+      nextOrderStatus: update.orderStatus,
+    });
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (error) {
+    console.error("Cashfree webhook failed", error);
     return NextResponse.json({ ok: false }, { status: 400 });
   }
 }
