@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
 import { createCashfreeOrder, isCashfreeConfigured } from "@/lib/cashfree";
 import { getServerBaseUrl } from "@/lib/server-url";
+import { createAdminClient } from "@/lib/supabase/admin";
 import {
   getCheckoutPaymentBreakdown,
   getCheckoutTotalsFromItems,
@@ -111,9 +111,11 @@ export async function POST(request: Request) {
     );
     const paymentBreakdown = getCheckoutPaymentBreakdown(totals.grandTotal, paymentMethodRaw);
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     if (!supabase) {
-      return failCheckout("Supabase is not configured.", 500);
+      return failCheckout("Supabase admin client is not configured.", 500, {
+        stage: "supabase_admin_client",
+      });
     }
 
     const orderInsertPayload = {
@@ -142,6 +144,7 @@ export async function POST(request: Request) {
     if (orderInsertError || !order) {
       return failCheckout(orderInsertError?.message || "Failed to create order.", 500, {
         stage: "order_insert",
+        client: "admin",
       });
     }
 
@@ -173,6 +176,7 @@ export async function POST(request: Request) {
       await supabase.from("orders").delete().eq("id", order.id);
       return failCheckout(itemInsertError.message, 500, {
         stage: "order_items_insert",
+        client: "admin",
         orderId: order.id,
       });
     }
